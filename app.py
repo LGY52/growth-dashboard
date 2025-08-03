@@ -1,4 +1,3 @@
-```python
 import streamlit as st
 import pandas as pd, io
 import re
@@ -20,10 +19,7 @@ if not uploaded:
     st.stop()
 
 # 3) 데이터 로드 & 병합
-dfs = [
-    pd.read_excel(io.BytesIO(f.read()), engine='openpyxl')
-    for f in uploaded
-]
+dfs = [pd.read_excel(io.BytesIO(f.read()), engine='openpyxl') for f in uploaded]
 data = pd.concat(dfs, ignore_index=True)
 
 # 4) 경력 그룹 나누기
@@ -35,16 +31,8 @@ data['경력그룹'] = pd.cut(
 )
 
 # 5) 불용어 사전 및 패턴
-stopwords = {
-    '대한','통해','그리고','하지만','있습니다','합니다','하는',
-    '되어','될','했습니다','입니다','위해','희망','분야의'
-}
-# 어미 및 조사 필터 패턴
-ending_pattern = re.compile(
-    r'(다|합니다|입니다|이다|한다|었|했|어요|에|하고|함으로서|'  
-    r'하여|으로는|니까|여서|이므로|바탕으로|로서)$'
-)
-# 조사·접미사 제거 패턴 (기본형 추출)
+stopwords = {'대한','통해','그리고','하지만','있습니다','합니다','하는','되어','될','했습니다','입니다','위해','희망','분야의'}
+ending_pattern = re.compile(r'(다|합니다|입니다|이다|한다|었|했|어요|에|하고|함으로서|하여|으로는|니까|여서|이므로|바탕으로|로서)$')
 norm_pattern = re.compile(r'(으로는|으로|로는|로|로서|와|과|이|가|은|는)$')
 
 @st.cache_data
@@ -60,10 +48,8 @@ def extract_keywords(df, role, top_n=10):
         for doc in texts:
             tokens = re.findall(r'[가-힣]{2,}', doc)
             for t in tokens:
-                # 불용어 및 어미 필터
                 if t in stopwords or ending_pattern.search(t):
                     continue
-                # 조사/접미사 제거하여 기본형 추출
                 base = norm_pattern.sub('', t)
                 if base in stopwords:
                     continue
@@ -87,11 +73,10 @@ for col, grp in zip(cols, labels):
         else:
             df_kw = pd.DataFrame(items, columns=['키워드', '빈도'])
             fig = px.bar(df_kw, x='키워드', y='빈도', text='빈도')
-            fig.update_traces(
-                hovertemplate='<b>%{x}</b><br>응답자 수: %{y}<extra></extra>'
-            )
+            fig.update_traces(hovertemplate='<b>%{x}</b><br>응답자 수: %{y}<extra></extra>')
             fig.update_layout(xaxis_tickangle=45, margin=dict(t=30))
             st.plotly_chart(fig, use_container_width=True)
+
 ```
 
 
