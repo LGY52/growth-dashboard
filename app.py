@@ -45,7 +45,6 @@ def extract_keywords(df, role, top_n=10):
     out = {}
     subset = df[df['직무'] == role]
     for grp in labels:
-        # — here is the fixed .loc with both [ and ] properly closed
         texts = subset.loc[
             subset['경력그룹'] == grp,
             '(2) 성장/역량/커리어-구성원 의견'
@@ -53,40 +52,20 @@ def extract_keywords(df, role, top_n=10):
 
         ctr = Counter()
         for doc in texts:
-            # 한글 2자 이상 토큰화
             tokens = re.findall(r'[가-힣]{2,}', doc)
             for t in tokens:
-                # 불용어 및 동사 어미 필터링
+                # 불용어 및 어미 필터링
                 if (
                     t not in stopwords
-                    and not re.search(r'(다|합니다|입니다|이다|한다|었|했|어요)$', t)
+                    and not re.search(
+                        r'(다|합니다|입니다|이다|한다|었|했|어요|에|하고|함으로서)$',
+                        t
+                    )
                 ):
                     ctr[t] += 1
         out[grp] = ctr.most_common(top_n)
     return out
 
 # 7) 사이드바: 직무 선택
-roles = data['직무'].unique().tolist()
-selected = st.sidebar.selectbox('직무 선택', roles)
-
-# 8) 추출 & 시각화
-results = extract_keywords(data, selected, top_n=10)
-cols = st.columns(len(labels))
-
-for col, grp in zip(cols, labels):
-    with col:
-        st.subheader(grp)
-        items = results.get(grp, [])
-        if not items:
-            st.write('응답 없음')
-        else:
-            df_kw = pd.DataFrame(items, columns=['키워드', '빈도'])
-            fig = px.bar(
-                df_kw, x='키워드', y='빈도', text='빈도'
-            )
-            fig.update_traces(
-                hovertemplate='<b>%{x}</b><br>응답자 수: %{y}<extra></extra>'
-            )
-            fig.update_layout(xaxis_tickangle=45, margin=dict(t=30))
-            st.plotly_chart(fig, use_container_width=True)
+roles = data['직무'].unique().to
 
