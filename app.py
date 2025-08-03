@@ -39,13 +39,11 @@ stopwords = {
     '되어','될','했습니다','입니다','위해','희망'
 }
 
-# 6) 주어·목적어 명사만 추출하는 키워드 함수
+# 6) 키워드 추출 함수
 @st.cache_data
 def extract_keywords(df, role, top_n=10):
     out = {}
     subset = df[df['직무'] == role]
-    # “명사(2자 이상) + 조사(이/가/을/를)” 패턴으로 추출
-    pattern = re.compile(r'([가-힣]{2,}?)(?=(?:이|가|을|를)\b)')
     for grp in labels:
         texts = subset.loc[
             subset['경력그룹'] == grp,
@@ -54,10 +52,17 @@ def extract_keywords(df, role, top_n=10):
 
         ctr = Counter()
         for doc in texts:
-            matches = pattern.findall(doc)
-            for noun in matches:
-                if noun not in stopwords:
-                    ctr[noun] += 1
+            tokens = re.findall(r'[가-힣]{2,}', doc)
+            for t in tokens:
+                # 불용어 및 어미 필터링: 다, 합니다, 입니다, 이다, 한다, 었, 했, 어요, 에, 하고, 함으로서, 하여, 으로는
+                if (
+                    t not in stopwords
+                    and not re.search(
+                        r'(다|합니다|입니다|이다|한다|었|했|어요|에|하고|함으로서|하여|으로는)$',
+                        t
+                    )
+                ):
+                    ctr[t] += 1
         out[grp] = ctr.most_common(top_n)
     return out
 
@@ -85,6 +90,7 @@ for col, grp in zip(cols, labels):
             )
             fig.update_layout(xaxis_tickangle=45, margin=dict(t=30))
             st.plotly_chart(fig, use_container_width=True)
+
 
 
 
