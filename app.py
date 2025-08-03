@@ -33,44 +33,50 @@ data['경력그룹'] = pd.cut(
     bins=bins, labels=labels, right=False
 )
 
-# 5) 불용어 사전
+# 5) 불용어 사전 및 어미 필터 패턴
 stopwords = {
     '대한','통해','그리고','하지만','있습니다','합니다','하는',
     '되어','될','했습니다','입니다','위해','희망'
 }
+# 어미 패턴: 다, 합니다, 입니다, 이다, 한다, 었, 했, 어요, 에, 하고,
+# 함으로서, 하여, 으로는, 니까, 여서, 이므로, 바탕으로
+ending_pattern = re.compile(
+    r'(다|합니다|입니다|이다|한다|었|했|어요|에|하고|'
+    r'함으로서|하여|으로는|니까|여서|이므로|바탕으로)$'
+)
 
-# 6) 키워드 추출 함수
 @st.cache_data
 def extract_keywords(df, role, top_n=10):
+    """
+    role: 직무명 또는 '전체'
+    """
     out = {}
-    subset = df[df['직무'] == role]
+    if role == '전체':
+        df_role = df
+    else:
+        df_role = df[df['직무'] == role]
     for grp in labels:
-        texts = subset.loc[
-            subset['경력그룹'] == grp,
+        texts = df_role.loc[
+            df_role['경력그룹'] == grp,
             '(2) 성장/역량/커리어-구성원 의견'
         ].dropna()
-
         ctr = Counter()
         for doc in texts:
             tokens = re.findall(r'[가-힣]{2,}', doc)
             for t in tokens:
-                # 불용어 및 어미 필터링: 다, 합니다, 입니다, 이다, 한다, 었, 했, 어요, 에, 하고, 함으로서, 하여, 으로는
-                if (
-                    t not in stopwords
-                    and not re.search(
-                        r'(다|합니다|입니다|이다|한다|었|했|어요|에|하고|함으로서|하여|으로는)$',
-                        t
-                    )
-                ):
-                    ctr[t] += 1
+                if t in stopwords:
+                    continue
+                if ending_pattern.search(t):
+                    continue
+                ctr[t] += 1
         out[grp] = ctr.most_common(top_n)
     return out
 
-# 7) 사이드바: 직무 선택
-roles = data['직무'].unique().tolist()
+# 6) 사이드바: 직무 선택 (전체 옵션 포함)
+roles = ['전체'] + data['직무'].unique().tolist()
 selected = st.sidebar.selectbox('직무 선택', roles)
 
-# 8) 추출 & 시각화
+# 7) 키워드 추출 & 시각화
 results = extract_keywords(data, selected, top_n=10)
 cols = st.columns(len(labels))
 
@@ -90,7 +96,5 @@ for col, grp in zip(cols, labels):
             )
             fig.update_layout(xaxis_tickangle=45, margin=dict(t=30))
             st.plotly_chart(fig, use_container_width=True)
-
-
 
 
